@@ -29,10 +29,10 @@ BINARY_DIR = path.join(BUILD_DIR, 'binary')
 REPO_DIR = path.join(BUILD_DIR, 'repos')
 
 codenames = (
-    "xenial",
     "bionic",
     "focal",
     "groovy",
+    "hirsute",
 )
 
 staging = {}
