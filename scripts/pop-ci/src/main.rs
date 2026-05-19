@@ -901,6 +901,11 @@ sudo sbuild-update \
                                 if arm64_opt.is_none() {
                                     continue;
                                 }
+
+                                // Only do arm64 builds for master pockets
+                                if !pockets.iter().any(|pocket| pocket.is_master()) {
+                                    continue;
+                                }
                             }
 
                             for part in line.split(' ') {
@@ -1216,7 +1221,7 @@ sudo sbuild-update \
                     pool_rebuilt = true;
                 }
 
-                if pocket.id() == "master" && launchpad {
+                if pocket.is_master() && launchpad {
                     for (changes_name, changes_path) in package.changes.iter() {
                         let dput = match repo_info.dput {
                             Some(some) => some,

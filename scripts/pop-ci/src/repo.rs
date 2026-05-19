@@ -72,6 +72,10 @@ impl Pocket {
             format!("Pop!_OS Staging {}", self.0)
         }
     }
+
+    pub fn is_master(&self) -> bool {
+        self.0 == "master"
+    }
 }
 
 #[derive(Clone)]
