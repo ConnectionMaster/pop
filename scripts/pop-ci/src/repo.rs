@@ -1,7 +1,5 @@
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
-use crate::config::{DEV_REPOS, POP_FOCAL_REPOS};
-
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Arch(&'static str);
 
@@ -22,13 +20,9 @@ impl Arch {
         self.id() == "arm64" || self.id() == "armhf"
     }
 
-    pub fn ubuntu_mirror(&self, release: &str) -> &'static str {
+    pub fn ubuntu_mirror(&self, _release: &str) -> &'static str {
         if self.id() == "amd64" || self.id() == "i386" {
-            if release == "focal" {
-                "http://us.archive.ubuntu.com/ubuntu"
-            } else {
-                "http://apt.pop-os.org/ubuntu"
-            }
+            "http://apt.pop-os.org/ubuntu"
         } else {
             "http://ports.ubuntu.com/ubuntu-ports"
         }
@@ -88,54 +82,27 @@ pub struct RepoInfo {
 }
 
 impl RepoInfo {
-    pub fn new(suite: &Suite, dev: bool) -> Self {
+    pub fn new(_suite: &Suite, dev: bool) -> Self {
         const ARCHS: &'static [Arch] = &[Arch("amd64"), Arch("i386"), Arch("arm64"), Arch("armhf")];
-
-        const OLD_ARCHS: &'static [Arch] = &[Arch("amd64"), Arch("i386")];
-
+        let key = fs::canonicalize("scripts/.iso.asc").expect("failed to find ISO key");
         if dev {
-            // Launchpad for all Ubuntu releases
-            // Launchpad used prior to Ubuntu 22.04
-            return match suite.id() {
-                "bionic" | "focal" => Self {
-                    key: fs::canonicalize("scripts/.ppa-dev.asc")
-                        .expect("failed to find dev PPA key"),
-                    release: "http://ppa.launchpad.net/system76-dev/stable/ubuntu",
-                    staging: "http://ppa.launchpad.net/system76-dev/pre-stable/ubuntu",
-                    dput: Some("ppa:system76-dev/pre-stable"),
-                    archs: match suite.id() {
-                        "bionic" => OLD_ARCHS,
-                        _ => ARCHS,
-                    },
-                },
-                // apt.pop-os.org for Ubuntu 22.04 and later
-                _ => Self {
-                    key: fs::canonicalize("scripts/.iso.asc").expect("failed to find ISO key"),
-                    release: "http://apt.pop-os.org/release-ubuntu",
-                    staging: "http://apt.pop-os.org/staging-ubuntu/master",
-                    dput: Some("ppa:system76-dev/pre-stable"),
-                    archs: ARCHS,
-                },
-            };
-        }
-
-        match suite.id() {
-            // Launchpad used prior to Pop 21.10
-            "bionic" | "focal" => Self {
-                key: fs::canonicalize("scripts/.ppa.asc").expect("failed to find PPA key"),
-                release: "http://ppa.launchpad.net/system76/pop/ubuntu",
-                staging: "http://ppa.launchpad.net/system76/proposed/ubuntu",
-                dput: Some("ppa:system76/proposed"),
-                archs: OLD_ARCHS,
-            },
+            // apt.pop-os.org for Ubuntu 22.04 and later
+            Self {
+                key,
+                release: "http://apt.pop-os.org/release-ubuntu",
+                staging: "http://apt.pop-os.org/staging-ubuntu/master",
+                dput: Some("ppa:system76-dev/pre-stable"),
+                archs: ARCHS,
+            }
+        } else {
             // apt.pop-os.org for Pop 21.10 and later
-            _ => Self {
-                key: fs::canonicalize("scripts/.iso.asc").expect("failed to find ISO key"),
+            Self {
+                key,
                 release: "http://apt.pop-os.org/release",
                 staging: "http://apt.pop-os.org/staging/master",
                 dput: None,
                 archs: ARCHS,
-            },
+            }
         }
     }
 }
@@ -143,7 +110,6 @@ impl RepoInfo {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum SuiteWildcard {
     None,
-    Focal,
     All,
 }
 
@@ -160,7 +126,6 @@ pub struct Suite(&'static str, &'static str, SuiteWildcard, SuiteDistro);
 impl Suite {
     // This list has every supported Pop!_OS and Ubuntu release
     pub const ALL: &'static [Self] = &[
-        Self("focal", "20.04", SuiteWildcard::Focal, SuiteDistro::All),
         Self("jammy", "22.04", SuiteWildcard::All, SuiteDistro::All),
         Self("noble", "24.04", SuiteWildcard::All, SuiteDistro::All),
         Self("questing", "25.10", SuiteWildcard::All, SuiteDistro::Ubuntu),
@@ -184,12 +149,9 @@ impl Suite {
         self.1
     }
 
-    pub fn wildcard(&self, repo_name: &str) -> bool {
+    pub fn wildcard(&self, _repo_name: &str) -> bool {
         match &self.2 {
             SuiteWildcard::None => false,
-            SuiteWildcard::Focal => {
-                DEV_REPOS.contains(&repo_name) || POP_FOCAL_REPOS.contains(&repo_name)
-            }
             SuiteWildcard::All => true,
         }
     }
