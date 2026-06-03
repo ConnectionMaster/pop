@@ -63,7 +63,7 @@ case "$1" in
         if [ "${added_key}" == "0" ]
         then
           echo "Adding key"
-          sudo apt-key add "${POP_DIR}/scripts/.iso.asc"
+          sudo gpg --dearmor -o /etc/apt/keyrings/iso.gpg "${POP_DIR}/scripts/.iso.asc"
           added_key=1
         fi
 
@@ -75,8 +75,14 @@ Pin-Priority: 1002
 EOF
 
         echo "Adding repository for '$newrepo'"
-        LINE="deb ${REPOS}$newrepo ${UBUNTU_CODENAME} main"
-        sudo add-apt-repository --enable-source --no-update "${LINE}"
+        sudo tee "/etc/apt/sources.list.d/${ORIGIN}-${newrepo//./_}.sources" <<EOF
+Enabled: yes
+Types: deb deb-src
+URIs: ${REPOS}$newrepo
+Suites: ${UBUNTU_CODENAME}
+Components: main
+Signed-By: /etc/apt/keyrings/iso.gpg
+EOF
       fi
     done
 
